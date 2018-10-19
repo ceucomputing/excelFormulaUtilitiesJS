@@ -227,8 +227,9 @@
      * @class
      */
 
-    function F_token(value, type, subtype) {
+    function F_token(value, index, type, subtype) {
         this.value = value;
+        this.index = index;
         this.type = type;
         this.subtype = subtype;
     }
@@ -241,11 +242,11 @@
 
         this.items = [];
 
-        this.add = function (value, type, subtype) {
+        this.add = function (value, index, type, subtype) {
             if (!subtype) {
                 subtype = "";
             }
-            var token = new F_token(value, type, subtype);
+            var token = new F_token(value, index, type, subtype);
             this.addRef(token);
             return token;
         };
@@ -298,9 +299,9 @@
         this.push = function (token) {
             this.items.push(token);
         };
-        this.pop = function (name) {
+        this.pop = function (name, index) {
             var token = this.items.pop();
-            return (new F_token(name || "", token.type, TOK_SUBTYPE_STOP));
+            return (new F_token(name || "", index, token.type, TOK_SUBTYPE_STOP));
         };
 
         this.token = function () {
@@ -372,7 +373,7 @@
                         offset += 1;
                     } else {
                         inString = false;
-                        tokens.add(token, TOK_TYPE_OPERAND, TOK_SUBTYPE_TEXT);
+                        tokens.add(token, offset - token.length, TOK_TYPE_OPERAND, TOK_SUBTYPE_TEXT);
                         token = "";
                     }
                 } else {
@@ -422,7 +423,7 @@
                 offset += 1;
                 if ((",#NULL!,#DIV/0!,#VALUE!,#REF!,#NAME?,#NUM!,#N/A,").indexOf("," + token + ",") !== -1) {
                     inError = false;
-                    tokens.add(token, TOK_TYPE_OPERAND, TOK_SUBTYPE_ERROR);
+                    tokens.add(token, offset - token.length, TOK_TYPE_OPERAND, TOK_SUBTYPE_ERROR);
                     token = "";
                 }
                 continue;
@@ -444,7 +445,7 @@
             if (currentChar() === "\"") {
                 if (token.length > 0) {
                     // not expected
-                    tokens.add(token, TOK_TYPE_UNKNOWN);
+                    tokens.add(token, offset - token.length, TOK_TYPE_UNKNOWN);
                     token = "";
                 }
                 inString = true;
@@ -455,7 +456,7 @@
             if (currentChar() === "'") {
                 if (token.length > 0) {
                     // not expected
-                    tokens.add(token, TOK_TYPE_UNKNOWN);
+                    tokens.add(token, offset - token.length, TOK_TYPE_UNKNOWN);
                     token = "";
                 }
                 token = "'"
@@ -474,7 +475,7 @@
             if (currentChar() === "#") {
                 if (token.length > 0) {
                     // not expected
-                    tokens.add(token, TOK_TYPE_UNKNOWN);
+                    tokens.add(token, offset - token.length, TOK_TYPE_UNKNOWN);
                     token = "";
                 }
                 inError = true;
@@ -487,11 +488,11 @@
             if (currentChar() === "{") {
                 if (token.length > 0) {
                     // not expected
-                    tokens.add(token, TOK_TYPE_UNKNOWN);
+                    tokens.add(token, offset - token.length, TOK_TYPE_UNKNOWN);
                     token = "";
                 }
-                tokenStack.push(tokens.add("ARRAY", TOK_TYPE_FUNCTION, TOK_SUBTYPE_START));
-                tokenStack.push(tokens.add("ARRAYROW", TOK_TYPE_FUNCTION, TOK_SUBTYPE_START));
+                tokenStack.push(tokens.add("ARRAY", offset, TOK_TYPE_FUNCTION, TOK_SUBTYPE_START));
+                tokenStack.push(tokens.add("ARRAYROW", offset, TOK_TYPE_FUNCTION, TOK_SUBTYPE_START));
                 offset += 1;
                 continue;
             }
@@ -500,25 +501,25 @@
                 if(root.excelFormulaUtilities.isEu){
                     // If is EU then handle ; as list seperators
                     if (token.length > 0) {
-                        tokens.add(token, TOK_TYPE_OPERAND);
+                        tokens.add(token, offset - token.length, TOK_TYPE_OPERAND);
                         token = "";
                     }
                     if (tokenStack.type() !== TOK_TYPE_FUNCTION) {
-                        tokens.add(currentChar(), TOK_TYPE_OP_IN, TOK_SUBTYPE_UNION);
+                        tokens.add(currentChar(), offset, TOK_TYPE_OP_IN, TOK_SUBTYPE_UNION);
                     } else {
-                        tokens.add(currentChar(), TOK_TYPE_ARGUMENT);
+                        tokens.add(currentChar(), offset, TOK_TYPE_ARGUMENT);
                     }
                     offset += 1;
                     continue;
                 } else {
                     // Else if not Eu handle ; as array row seperator
                     if (token.length > 0) {
-                        tokens.add(token, TOK_TYPE_OPERAND);
+                        tokens.add(token, offset - token.length, TOK_TYPE_OPERAND);
                         token = "";
                     }
-                    tokens.addRef(tokenStack.pop());
-                    tokens.add(",", TOK_TYPE_ARGUMENT);
-                    tokenStack.push(tokens.add("ARRAYROW", TOK_TYPE_FUNCTION, TOK_SUBTYPE_START));
+                    tokens.addRef(tokenStack.pop("", offset));
+                    tokens.add(",", offset, TOK_TYPE_ARGUMENT);
+                    tokenStack.push(tokens.add("ARRAYROW", offset + 1, TOK_TYPE_FUNCTION, TOK_SUBTYPE_START));
                     offset += 1;
                     continue;
                 }
@@ -526,11 +527,11 @@
 
             if (currentChar() === "}") {
                 if (token.length > 0) {
-                    tokens.add(token, TOK_TYPE_OPERAND);
+                    tokens.add(token, offset - token.length, TOK_TYPE_OPERAND);
                     token = "";
                 }
-                tokens.addRef(tokenStack.pop("ARRAYROWSTOP"));
-                tokens.addRef(tokenStack.pop("ARRAYSTOP"));
+                tokens.addRef(tokenStack.pop("ARRAYROWSTOP", offset));
+                tokens.addRef(tokenStack.pop("ARRAYSTOP", offset));
                 offset += 1;
                 continue;
             }
@@ -538,10 +539,10 @@
             // trim white-space
             if (currentChar() === " ") {
                 if (token.length > 0) {
-                    tokens.add(token, TOK_TYPE_OPERAND);
+                    tokens.add(token, offset - token.length, TOK_TYPE_OPERAND);
                     token = "";
                 }
-                tokens.add("", TOK_TYPE_WSPACE);
+                tokens.add("", offset, TOK_TYPE_WSPACE);
                 offset += 1;
                 while ((currentChar() === " ") && (!EOF())) {
                     offset += 1;
@@ -552,10 +553,10 @@
             // multi-character comparators
             if ((",>=,<=,<>,").indexOf("," + doubleChar() + ",") !== -1) {
                 if (token.length > 0) {
-                    tokens.add(token, TOK_TYPE_OPERAND);
+                    tokens.add(token, offset - token.length, TOK_TYPE_OPERAND);
                     token = "";
                 }
-                tokens.add(doubleChar(), TOK_TYPE_OP_IN, TOK_SUBTYPE_LOGICAL);
+                tokens.add(doubleChar(), offset, TOK_TYPE_OP_IN, TOK_SUBTYPE_LOGICAL);
                 offset += 2;
                 continue;
             }
@@ -563,10 +564,10 @@
             // standard infix operators
             if (("+-*/^&=><").indexOf(currentChar()) !== -1) {
                 if (token.length > 0) {
-                    tokens.add(token, TOK_TYPE_OPERAND);
+                    tokens.add(token, offset - token.length, TOK_TYPE_OPERAND);
                     token = "";
                 }
-                tokens.add(currentChar(), TOK_TYPE_OP_IN);
+                tokens.add(currentChar(), offset, TOK_TYPE_OP_IN);
                 offset += 1;
                 continue;
             }
@@ -574,10 +575,10 @@
             // standard postfix operators
             if (("%").indexOf(currentChar()) !== -1) {
                 if (token.length > 0) {
-                    tokens.add(token, TOK_TYPE_OPERAND);
+                    tokens.add(token, offset - token.length, TOK_TYPE_OPERAND);
                     token = "";
                 }
-                tokens.add(currentChar(), TOK_TYPE_OP_POST);
+                tokens.add(currentChar(), offset, TOK_TYPE_OP_POST);
                 offset += 1;
                 continue;
             }
@@ -585,10 +586,10 @@
             // start subexpression or function
             if (currentChar() === "(") {
                 if (token.length > 0) {
-                    tokenStack.push(tokens.add(token, TOK_TYPE_FUNCTION, TOK_SUBTYPE_START));
+                    tokenStack.push(tokens.add(token, offset - token.length, TOK_TYPE_FUNCTION, TOK_SUBTYPE_START));
                     token = "";
                 } else {
-                    tokenStack.push(tokens.add("", TOK_TYPE_SUBEXPR, TOK_SUBTYPE_START));
+                    tokenStack.push(tokens.add("", offset, TOK_TYPE_SUBEXPR, TOK_SUBTYPE_START));
                 }
                 offset += 1;
                 continue;
@@ -597,13 +598,13 @@
             // function, subexpression, array parameters
             if (currentChar() === "," && !root.excelFormulaUtilities.isEu) {
                 if (token.length > 0) {
-                    tokens.add(token, TOK_TYPE_OPERAND);
+                    tokens.add(token, offset - token.length, TOK_TYPE_OPERAND);
                     token = "";
                 }
                 if (tokenStack.type() !== TOK_TYPE_FUNCTION) {
-                    tokens.add(currentChar(), TOK_TYPE_OP_IN, TOK_SUBTYPE_UNION);
+                    tokens.add(currentChar(), offset, TOK_TYPE_OP_IN, TOK_SUBTYPE_UNION);
                 } else {
-                    tokens.add(currentChar(), TOK_TYPE_ARGUMENT);
+                    tokens.add(currentChar(), offset, TOK_TYPE_ARGUMENT);
                 }
                 offset += 1;
                 continue;
@@ -612,10 +613,10 @@
             // stop subexpression
             if (currentChar() === ")") {
                 if (token.length > 0) {
-                    tokens.add(token, TOK_TYPE_OPERAND);
+                    tokens.add(token, offset - token.length, TOK_TYPE_OPERAND);
                     token = "";
                 }
-                tokens.addRef(tokenStack.pop());
+                tokens.addRef(tokenStack.pop("", offset));
                 offset += 1;
                 continue;
             }
@@ -639,9 +640,9 @@
               token = "#" + token;
             }
 
-            tokens.add(token, TOK_TYPE_UNKNOWN);
+            tokens.add(token, offset - token.length, TOK_TYPE_UNKNOWN);
           } else {
-            tokens.add(token, TOK_TYPE_OPERAND);
+            tokens.add(token, offset - token.length, TOK_TYPE_OPERAND);
           }
         }
 
@@ -669,7 +670,7 @@
                 //	{}
                 //else { tokens2.add(token.value, TOK_TYPE_OP_IN, TOK_SUBTYPE_INTERSECT)};
                 if (doAddToken) {
-                    tokens2.add(token.value.toString(), TOK_TYPE_OP_IN, TOK_SUBTYPE_INTERSECT);
+                    tokens2.add(token.value.toString(), token.index, TOK_TYPE_OP_IN, TOK_SUBTYPE_INTERSECT);
                 }
                 continue;
             }
