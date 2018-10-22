@@ -654,10 +654,9 @@
     function breakOutRanges(rangeStr, delimStr){
 
         //Quick Check to see if if rangeStr is a valid range
-        if ( !RegExp("\\$?[a-z]+\\$?[0-9]+:\\$?[a-z]+\\$?[0-9]+","gi").test(rangeStr) ){
+        if ( !RegExp("[a-z]+[0-9]+:[a-z]+[0-9]+","gi").test(rangeStr) ){
             throw "This is not a valid range: " + rangeStr;
         }
-        rangeStr = rangeStr.replace(/\$/g, '');
 
         //Make the rangeStr lowercase to deal with looping.
         var range = rangeStr.split(":"),
@@ -1150,6 +1149,7 @@
                 switch (token.subtype) {
 
                     case TOK_SUBTYPE_RANGE:
+                        tokenString = tokenString.replace(/\$/g, '');
                         //Assume '=' sign
                         if(!currentFunctionOnStack){
                           break;
