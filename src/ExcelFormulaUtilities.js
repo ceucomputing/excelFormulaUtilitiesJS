@@ -545,7 +545,7 @@
 
             if ((token.type.toString() === TOK_TYPE_OPERAND) && (token.subtype.length === 0)) {
                 if (isNaN(parseFloat(token.value))) {
-                    if ((token.value.toString() === 'TRUE') || (token.value.toString() === 'FALSE')) {
+                    if ((token.value.toString().toUpperCase() === 'TRUE') || (token.value.toString().toUpperCase() === 'FALSE')) {
                         token.subtype = TOK_SUBTYPE_LOGICAL.toString();
                     } else {
                         token.subtype = TOK_SUBTYPE_RANGE.toString();
