@@ -1154,7 +1154,7 @@
                 switch (token.subtype) {
 
                     case TOK_SUBTYPE_RANGE:
-                        tokenString = tokenString.replace(/\$/g, '');
+                        tokenString = tokenString.replace(/\$/g, '').toUpperCase();
                         //Assume '=' sign
                         if(!currentFunctionOnStack){
                           break;
