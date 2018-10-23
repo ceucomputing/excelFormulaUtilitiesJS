@@ -1202,6 +1202,10 @@
 
                         break;
 
+                    case TOK_SUBTYPE_LOGICAL:
+                        outstr = tokenString.toLowerCase();
+                        break;
+
                     default:
                         break;
                 }
