@@ -1270,7 +1270,7 @@
                         name: tokenString,
                         argumentNumber: 0
                     });
-                    outstr = typeof directConversionMap[tokenString.toUpperCase()] === "string" ? directConversionMap[tokenString.toUpperCase()] : tokenString;
+                    outstr = typeof directConversionMap[tokenString.toUpperCase()] === "string" ? directConversionMap[tokenString.toUpperCase()] : tokenString.toUpperCase();
                     useTemplate = true;
 
                     break;
